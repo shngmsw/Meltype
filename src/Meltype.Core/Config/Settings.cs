@@ -155,6 +155,10 @@ public sealed class Settings
      Description("Keyboard モードで、変換ボックスが出ていないときの 半角/全角 キーを Meltype キーボードの ON/OFF (直接入力) に使います。")]
     public bool HankakuTogglesKeyboard { get; set; } = true;
 
+    [Category("1. 全般"), DisplayName("左右の Alt で英数/日本語"),
+     Description("Keyboard モードで、左 Alt の単独押しを英数、右 Alt の単独押しを日本語にします (半角/全角 キーの無い US 配列向け)。Alt の単独押しでメニューバーに移らなくなります。")]
+    public bool AltKeysSwitchMode { get; set; }
+
     [Category("1. 全般"), DisplayName("確定後も文脈に合わせて直す"),
      Description("英語とも日本語とも読める語 (i, sushi など) を確定した後、次の語で英語か日本語かがはっきりしたら自動で確定し直します (i → 胃 と確定した後に want と打つと I want)。")]
     public bool AutoCorrectAfterCommit { get; set; } = true;
@@ -267,6 +271,7 @@ public sealed class Settings
     [
         nameof(Profiles), nameof(ActiveProfile), nameof(SettingsVersion), nameof(WelcomeShown),
         nameof(Enabled), nameof(JapaneseKeyboardOnly), nameof(FileLog), nameof(LogTypedText), nameof(AutoUpdate),
+        nameof(AltKeysSwitchMode),
     ];
 
     /// <summary>今の設定の値のうち、プロファイルに入れるもの。</summary>

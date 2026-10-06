@@ -186,6 +186,8 @@ internal sealed class MeltypeEngine : ISessionEnvironment, IDisposable
         // 変換ボックスの準備前・終了処理中は何もしない (素通し)。
         if (_composition is not { } composition) return false;
 
+        if (settings.Enabled && settings.AltKeysSwitchMode) SwitchModeByAlt(e, settings, composition);
+
         // 半角/全角 キーは Microsoft IME ではなく Meltype キーボードの ON/OFF に使う。
         if (settings.Enabled && settings.HankakuTogglesKeyboard && VirtualKeys.IsHankakuZenkaku(e.Vk) && !e.Injected && !composition.Gate.IsCaptured)
         {
@@ -228,6 +230,33 @@ internal sealed class MeltypeEngine : ISessionEnvironment, IDisposable
         if (!swallowed && e.IsDown && !VirtualKeys.IsModifier(e.Vk)) composition.ForgetLastCommit();
         if (!swallowed && !e.Injected) TrackLine(e);
         return swallowed;
+    }
+
+    private readonly AltModeKeys _altModeKeys = new();
+
+    /// <summary>
+    /// 左 Alt の単独押しで英数、右 Alt の単独押しで日本語にする (設定「左右の Alt で英数/日本語」)。
+    /// Alt 自体はアプリにそのまま通す。押した時点で何もしないキーを送り、離したときにメニューバーへ移らないようにする。
+    /// </summary>
+    private void SwitchModeByAlt(KeyEvent e, Settings settings, Composition.CompositionService composition)
+    {
+        var action = _altModeKeys.OnKey(e);
+        if (action == AltKeyAction.Pressed) ThreadPool.QueueUserWorkItem(_ => KeyInjector.SendKey(0xE8));
+        if (action is not (AltKeyAction.English or AltKeyAction.Japanese) || composition.Gate.IsCaptured) return;
+
+        // コードエディター・ターミナルでは、右 Alt でこの行を日本語にする (半角/全角 と同じ)。
+        if (action == AltKeyAction.Japanese)
+        {
+            if (IsCodeApp(settings)) _codeJapanese = true;
+            if (_keyboardDirect) KeyboardDirect = false;
+            else composition.ShowMode(true);
+        }
+        else
+        {
+            _codeJapanese = false;
+            if (!_keyboardDirect) KeyboardDirect = true;
+            else composition.ShowMode(false);
+        }
     }
 
     /// <summary>
@@ -407,6 +436,7 @@ internal sealed class MeltypeEngine : ISessionEnvironment, IDisposable
 
     private bool OnMouseButton(Composition.MouseButtonEvent e)
     {
+        _altModeKeys.Interrupt(); // Alt + クリックのあとの Alt の解放では切り替えない
         if (_settings.Mode == InputMode.Keyboard && _composition is { } composition)
         {
             if (composition.Gate.OnMouseButton(e)) return true;
